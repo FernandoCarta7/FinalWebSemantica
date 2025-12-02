@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initialscale=1.0">
+    <title>Color Sense - Adaptación para Daltonismo</title>
+    <link rel="stylesheet" href="../styles/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>Color Sense</h1>
+        <p>Una experiencia web adaptativa para personas con
+            daltonismo</p>
+        <div class="controls">
+            <label for="daltonismType">Tipo de Daltonismo:</label>
+            <select id="daltonismType">
+                <option value="none">Sin Adaptación</option>
+                <option value="protanopia">Protanopia (Ceguera al
+                    Rojo)</option>
+                <option value="deuteranopia">Deuteranopia (Ceguera al
+                    Verde)</option>
+                pág. 6
+                <option value="tritanopia">Tritanopia (Ceguera al
+                    Azul)</option>
+            </select>
+            <button id="applyAdaptation">Aplicar Adaptación</button>
+        </div>
+    </header>
+    <main id="content">
+        <h2>Sección de Noticias y Gráficos</h2>
+        <div class="news-item">
+            <h3>Artículo Importante con Colores</h3>
+            <p>Este párrafo contiene texto normal. A continuación, verás
+                un bloque de color.</p>
+            <div class="color-block red" data-color-name="Rojo" id="colorBlock1"></div>
+            <div class="color-block green" data-color-name="Verde" id="colorBlock2"></div>
+            <div class="color-block blue" data-color-name="Azul" id="colorBlock3"></div>
+            <p>Se espera que los usuarios con daltonismo perciban estos
+                colores de manera diferente.</p>
+        </div>
+        <div class="data-chart">
+            <h3>Gráfico de Barras de Ventas</h3>
+            <p>Este gráfico muestra las ventas trimestrales con barras de
+                diferentes colores.</p>
+            <div class="chart-container" id="salesChart">
+                <div class="bar q1" style="height: 100px; backgroundcolor: #FF6347;" data-original-color="#FF6347"
+                    data-label="Q1"></div>
+                <div class="bar q2" style="height: 120px; backgroundcolor: #4682B4;" data-original-color="#4682B4"
+                    data-label="Q2"></div>
+                <div class="bar q3" style="height: 80px; backgroundcolor: #3CB371;" data-original-color="#3CB371"
+                    data-label="Q3"></div>
+                <div class="bar q4" style="height: 150px; backgroundcolor: #DAA520;" data-original-color="#DAA520"
+                    data-label="Q4"></div>
+            </div>
+            <div class="chart-legend" id="chartLegend">
+                <span>Q1</span> <span>Q2</span> <span>Q3</span>
+                <span>Q4</span>
+            </div>
+        </div>
+        <h2>Galería de Imágenes</h2>
+        <div class="image-gallery">
+            pág. 7
+            <img src="https://via.placeholder.com/300/FF0000/FFFFFF?text=Rojo" alt="Círculo rojo"
+                data-color-name="Rojo Brillante" id="imgRed">
+            <img src="https://via.placeholder.com/300/00FF00/FFFFFF?text=Verde" alt="Círculo verde"
+                data-color-name="Verde Brillante" id="imgGreen">
+            <img src="https://via.placeholder.com/300/0000FF/FFFFFF?text=Azul" alt="Círculo azul"
+                data-color-name="Azul Brillante" id="imgBlue">
+            <img src="https://via.placeholder.com/300/800080/FFFFFF?text=Púrpura" alt="Círculo púrpura"
+                data-color-name="Púrpura" id="imgPurple">
+        </div>
+    </main>
+    <script src="../scripts/script.js"></script>
+</body>
+
+</html>

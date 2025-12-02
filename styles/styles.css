@@ -1,0 +1,186 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+header {
+    background-color: #3498db;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.controls {
+    margin-top: 15px;
+}
+
+.controls label,
+.controls select,
+.controls button {
+    margin: 0 5px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: none;
+}
+
+.controls select {
+    background-color: white;
+}
+
+.controls button {
+    background-color: #2ecc71;
+    color: white;
+    cursor: pointer;
+}
+
+main {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2,
+h3 {
+    color: #34495e;
+}
+
+.news-item,
+.data-chart,
+.image-gallery {
+    margin-bottom: 30px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+}
+
+.color-block {
+    width: 100px;
+    height: 50px;
+    display: inline-block;
+    margin: 5px;
+    border: 1px solid #ccc;
+    position: relative;
+    /* Para la descripción */
+}
+
+.color-block.red {
+    background-color: red;
+}
+
+.color-block.green {
+    background-color: green;
+}
+
+.color-block.blue {
+    background-color: blue;
+}
+
+.chart-container {
+    display: flex;
+    align-items: flex-end;
+    height: 200px;
+    border-left: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    padding-left: 10px;
+    margin-top: 15px;
+}
+
+.bar {
+    width: 40px;
+    margin: 0 10px;
+    background-color: #555;
+    /* Color base */
+    position: relative;
+}
+
+.bar::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    color: #666;
+}
+
+.chart-legend {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.chart-legend span {
+    display: inline-block;
+    width: 40px;
+    text-align: center;
+    margin: 0 10px;
+    font-size: 0.8em;
+}
+
+.image-gallery img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    margin: 10px;
+    border: 1px solid #ccc;
+    transition: filter 0.3s ease;
+    position: relative;
+}
+
+.protanopia-filter {
+    filter: url(#protanopia);
+    /* Se definiría en un SVG */
+}
+
+.deuteranopia-filter {
+    filter: url(#deuteranopia);
+    /* Se definiría en un SVG */
+}
+
+.tritanopia-filter {
+    filter: url(#tritanopia);
+    /* Se definiría en un SVG */
+}
+
+/* Estilo para las descripciones de color */
+.color-description {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.color-block:hover .color-description,
+.bar:hover .color-description,
+.image-gallery img:hover+.color-description {
+    /* Esto es un ejemplo,
+las img tendrían que tener un div wrapper */
+    opacity: 1;
+}
+
+/* Clases para color adaptado (ejemplo, se pueden generar dinámicamente)
+*/
+.adapted-color-red {
+    background-color: #00FF00 !important;
+}
+
+/*
+Protanopia: rojo a verde */
+.adapted-color-green {
+    background-color: #FF00FF !important;
+}
+
+/*
+Deuteranopia: verde a magenta */
