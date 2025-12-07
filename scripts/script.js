@@ -1,70 +1,97 @@
 // Simulación de la comunicación con el Agente Semántico y de
-Personalización(servidor)
+// Personalización (servidor) con soporte básico de localización
 const semanticAgent = {
-    // Esto sería una llamada a una API real en un proyecto completo
     adaptContent: async (elements, userProfile) => {
-        console.log("Simulando adaptación de contenido por Agente Semántico...");
+        const lang = (userProfile && userProfile.language) ? userProfile.language : 'es';
+        console.log("Simulando adaptación de contenido por Agente Semántico (lang=", lang, ")...");
         console.log("Elementos a analizar:", elements);
         console.log("Perfil de usuario:", userProfile);
-        // Aquí iría la lógica para enviar los elementos al servidor,
-        // el servidor procesaría con ontologías y metadatos,
-        // y devolvería las adaptaciones.
-        // Datos de ejemplo simulados que el servidor devolvería
-        const simulatedResponse = {
-            adaptedElements: []
+
+        const messages = {
+            es: {
+                adaptedFromTo: (from, to, condition) => `Adaptado desde ${from} a ${to} para ${condition}.`,
+                barAdapted: (label, to, condition) => `Barra ${label} adaptada a ${to} para ${condition}.`,
+                imageAdapted: (from, to, condition) => `Imagen adaptada desde ${from} a ${to} para ${condition}.`
+            },
+            en: {
+                adaptedFromTo: (from, to, condition) => `Adapted from ${from} to ${to} for ${condition}.`,
+                barAdapted: (label, to, condition) => `Bar ${label} adapted to ${to} for ${condition}.`,
+                imageAdapted: (from, to, condition) => `Image adapted from ${from} to ${to} for ${condition}.`
+            }
         };
-        // Lógica de adaptación muy simplificada para demostración
+
+        const colorNameMap = {
+            es: { green: 'verde', brown: 'marrón', magenta: 'magenta', purple: 'púrpura', pink: 'rosa', orange: 'naranja', red: 'rojo', blue: 'azul' },
+            en: { green: 'green', brown: 'brown', magenta: 'magenta', purple: 'purple', pink: 'pink', orange: 'orange', red: 'red', blue: 'blue' }
+        };
+
+        function colorIncludes(element, keyword) {
+            const cname = (element.colorName || '').toString().toLowerCase();
+            const oc = (element.originalColor || '').toString().toLowerCase();
+            return cname.includes(keyword) || oc.includes(keyword) || oc === keyword;
+        }
+
+        const simulatedResponse = { adaptedElements: [] };
+
         elements.forEach(element => {
-            let adaptedColor = element.originalColor;
-            let description = element.colorName || "Un elemento visual";
-            // Descripción por defecto
+            let adaptedColor = element.originalColor || null;
+            let adaptedLabel = null;
+            let description = element.colorName || (lang === 'en' ? 'A visual element' : 'Un elemento visual');
+            const type = element.type || 'unknown';
+            const M = messages[lang] || messages['es'];
+            const colorNames = colorNameMap[lang] || colorNameMap['es'];
+
             if (userProfile.daltonismType === 'protanopia') {
-                if (element.originalColor === 'red') {
-                    adaptedColor = '#00FF00'; // Simular rojo adaptado a
-                    verde
-                    description = `Un bloque que originalmente era rojo, ahora adaptado a verde para protanopia.`;
-                } else if (element.originalColor === '#FF6347') { //
-                    Tomate
-                    adaptedColor = '#A52A2A'; // Simular un cambio a un tono más marrón para protanopia
-                    description = `Barra Q1 (originalmente rojo  anaranjado), ahora adaptado a marrón.`;
+                if (colorIncludes(element, 'rojo') || colorIncludes(element, '#ff6347') || colorIncludes(element, 'ff0000')) {
+                    adaptedColor = '#00FF00';
+                    adaptedLabel = colorNames.green;
+                    description = M.adaptedFromTo(element.colorName || colorNames.red, adaptedLabel, 'protanopia');
+                } else if (type === 'chart-bar' && colorIncludes(element, '#ff6347')) {
+                    adaptedColor = '#A52A2A';
+                    adaptedLabel = colorNames.brown;
+                    description = M.barAdapted(element.label || '', adaptedLabel, 'protanopia');
                 }
             } else if (userProfile.daltonismType === 'deuteranopia') {
-                if (element.originalColor === 'green') {
-                    adaptedColor = '#FF00FF'; // Simular verde adaptado a magenta
-                    description = `Un bloque que originalmente era verde, ahora adaptado a magenta para deuteranopia.`;
-
-                } else if (element.originalColor === '#3CB371') { //Verde mar
-                    adaptedColor = '#800080'; // Simular un cambio a púrpura para deuteranopia
-                    description = `Barra Q3 (originalmente verde), ahora adaptado a púrpura.`;
+                if (colorIncludes(element, 'verde') || colorIncludes(element, '#3cb371') || colorIncludes(element, '#00ff00')) {
+                    adaptedColor = '#FF00FF';
+                    adaptedLabel = colorNames.magenta;
+                    description = M.adaptedFromTo(element.colorName || colorNames.green, adaptedLabel, 'deuteranopia');
+                } else if (type === 'chart-bar' && colorIncludes(element, '#3cb371')) {
+                    adaptedColor = '#800080';
+                    adaptedLabel = colorNames.purple;
+                    description = M.barAdapted(element.label || '', adaptedLabel, 'deuteranopia');
                 }
             } else if (userProfile.daltonismType === 'tritanopia') {
-                if (element.originalColor === 'blue') {
-                    adaptedColor = '#FFC0CB'; // Simular azul adaptado a rosa
-                    description = `Un bloque que originalmente era azul, ahora adaptado a rosa para tritanopia.`;
-                } else if (element.originalColor === '#4682B4') { // Azul acero
-                    adaptedColor = '#FFA500'; // Simular un cambio a naranja para tritanopia
-                    description = `Barra Q2 (originalmente azul), ahora adaptado a naranja.`;
+                if (colorIncludes(element, 'azul') || colorIncludes(element, '#4682b4') || colorIncludes(element, '#0000ff')) {
+                    adaptedColor = '#FFC0CB';
+                    adaptedLabel = colorNames.pink;
+                    description = M.adaptedFromTo(element.colorName || colorNames.blue, adaptedLabel, 'tritanopia');
+                } else if (type === 'chart-bar' && colorIncludes(element, '#4682b4')) {
+                    adaptedColor = '#FFA500';
+                    adaptedLabel = colorNames.orange;
+                    description = M.barAdapted(element.label || '', adaptedLabel, 'tritanopia');
                 }
             }
 
-
-            // Añadir metadatos semánticos simulados
             const semanticMetadata = {
                 "@context": "http://schema.org",
                 "@type": "VisualElement",
-                "colorInterpretation": `Adaptado para
-                ${userProfile.daltonismType}.`,
-                "originalColorHex": element.originalColor,
-                "adaptedColorHex": adaptedColor,
+                "colorInterpretation": `Adaptado para ${userProfile.daltonismType}`,
+                "originalColor": element.originalColor || null,
+                "adaptedColor": adaptedColor,
+                "adaptedLabel": adaptedLabel || null,
                 "description": description
             };
+
             simulatedResponse.adaptedElements.push({
                 id: element.id,
+                type: type,
                 adaptedColor: adaptedColor,
                 description: description,
                 semanticMetadata: semanticMetadata
             });
         });
+
         return simulatedResponse;
     }
 };
@@ -74,19 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const daltonismTypeSelect = document.getElementById('daltonismType');
     const applyAdaptationButton =
         document.getElementById('applyAdaptation');
+    const langSelect = document.getElementById('langSelect');
     const contentArea = document.getElementById('content');
     // Función para añadir descripciones visuales
     function addVisualDescription(element, description) {
         let descSpan = element.nextElementSibling;
-        if (!descSpan || !descSpan.classList.contains('colordescription')) {
+        if (!descSpan || !descSpan.classList.contains('color-description')) {
             descSpan = document.createElement('span');
             descSpan.classList.add('color-description');
-            element.parentNode.insertBefore(descSpan,
-                element.nextSibling);
+            element.parentNode.insertBefore(descSpan, element.nextSibling);
         }
         descSpan.textContent = description;
-        descSpan.style.opacity = '1'; // Asegurar que la descripción sea
-        visible
+        descSpan.style.opacity = '1';
     }
     // Función para quitar descripciones visuales
     function removeVisualDescription(element) {
@@ -95,18 +121,37 @@ document.addEventListener('DOMContentLoaded', () => {
             descSpan.remove();
         }
     }
+    // Aplicar traducciones iniciales
+    if (window.SimpleI18n && typeof window.SimpleI18n.applyTranslations === 'function') {
+        const initialLang = (langSelect && langSelect.value) ? langSelect.value : 'es';
+        window.SimpleI18n.applyTranslations(initialLang);
+    }
+
+    if (langSelect) {
+        langSelect.addEventListener('change', () => {
+            const newLang = langSelect.value || 'es';
+            if (window.SimpleI18n && typeof window.SimpleI18n.applyTranslations === 'function') {
+                window.SimpleI18n.applyTranslations(newLang);
+            }
+        });
+    }
+
     applyAdaptationButton.addEventListener('click', async () => {
         const selectedDaltonismType = daltonismTypeSelect.value;
+        const selectedLang = (langSelect && langSelect.value) ? langSelect.value : 'es';
         // Resetear adaptaciones previas
         contentArea.querySelectorAll('[data-adapted-color]').forEach(el => {
-            el.style.backgroundColor = el.dataset.originalColor;
+            if (el.dataset.originalColor) {
+                el.style.backgroundColor = el.dataset.originalColor;
+            }
             delete el.dataset.adaptedColor;
             removeVisualDescription(el);
         });
-        contentArea.querySelectorAll('.adapted-textdescription').forEach(el => el.remove());
         contentArea.querySelectorAll('.image-gallery img').forEach(img => {
-
             img.style.filter = 'none'; // Quitar filtros CSS si se aplicaron
+            if (img.dataset.originalColor) {
+                // no-op for now; images typically don't have backgroundColor
+            }
             removeVisualDescription(img);
         });
         if (selectedDaltonismType === 'none') {
@@ -115,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const userProfile = {
             daltonismType: selectedDaltonismType,
+            language: selectedLang,
             preferences: {
                 contrastLevel: 'high', // Ejemplo, se obtendría del perfil de usuario
                 fontSize: 'medium'
@@ -123,32 +169,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const elementsToAnalyze = [];
         // 1. Recolectar bloques de color
         document.querySelectorAll('.color-block').forEach(block => {
+            const oc = getComputedStyle(block).backgroundColor;
+            block.dataset.originalColor = oc; // Guardar para reset
             elementsToAnalyze.push({
                 id: block.id,
                 type: 'color-block',
-                originalColor: getComputedStyle(block).backgroundColor,
-                // Obtener color RGB
-                colorName: block.dataset.colorName // Metadato simple del HTML
+                originalColor: oc,
+                colorName: block.dataset.colorName || null
             });
         });
         // 2. Recolectar barras del gráfico
-        document.querySelectorAll('.data-chart .bar').forEach(bar => {
+        document.querySelectorAll('#salesChart .bar').forEach(bar => {
+            // Asegurarse de que la barra tenga un id estable
+            if (!bar.id && bar.dataset.label) bar.id = `bar-${bar.dataset.label}`;
+            // data-original-color ya existe en el HTML; asegurar copia a dataset
+            if (bar.dataset.originalColor) bar.dataset.originalColor = bar.dataset.originalColor;
             elementsToAnalyze.push({
-                id: bar.id || `bar-${bar.dataset.label}`,
+                id: bar.id,
                 type: 'chart-bar',
-                originalColor: bar.dataset.originalColor, // Color original guardado en data-*
-                label: bar.dataset.label
+                originalColor: bar.dataset.originalColor || null,
+                label: bar.dataset.label || null
             });
         });
         // 3. Recolectar imágenes
         document.querySelectorAll('.image-gallery img').forEach(img => {
 
+            // Guardar referencia visual simple si hace falta
+            img.dataset.originalColor = img.dataset.originalColor || '';
             elementsToAnalyze.push({
                 id: img.id,
                 type: 'image',
                 src: img.src,
                 alt: img.alt,
-                colorName: img.dataset.colorName
+                colorName: img.dataset.colorName || null
             });
         });
         // Simular la llamada al Agente Semántico del servidor
@@ -157,29 +210,30 @@ document.addEventListener('DOMContentLoaded', () => {
         // Aplicar las adaptaciones recibidas
         adaptationResponse.adaptedElements.forEach(adapted => {
             const element = document.getElementById(adapted.id);
-            if (element) {
-                if (adapted.type === 'image') {
-                    // Ejemplo: Aplicar filtro CSS o cambiar src por una imagen adaptada
-                    // Para una implementación real, el servidor podría devolver un 'adaptedSrc'
-                    // o un filtro SVG complejo. Aquí solo aplicamos un filtro básico.
-                    element.style.filter = `sepia(100%) hue-rotate(90deg)
-saturate(200%)`; // Filtro genérico de ejemplo
-                    addVisualDescription(element, adapted.description);
-                } else {
-                    // Adaptar color de fondo
+            if (!element) return;
+            if (adapted.type === 'image') {
+                // Aplicar un filtro CSS de ejemplo para imágenes
+                element.style.filter = `sepia(20%) saturate(120%)`;
+                if (adapted.adaptedColor) element.dataset.adaptedColor = adapted.adaptedColor;
+                addVisualDescription(element, adapted.description);
+            } else if (adapted.type === 'chart-bar' || adapted.type === 'color-block') {
+                if (adapted.adaptedColor) {
                     element.style.backgroundColor = adapted.adaptedColor;
                     element.dataset.adaptedColor = adapted.adaptedColor;
-                    // Guardar el color adaptado
-                    // Añadir descripción textual junto al elemento
+                }
+                addVisualDescription(element, adapted.description);
+            } else {
+                // Por defecto, intentar aplicar color si existe
+                if (adapted.adaptedColor) {
+                    element.style.backgroundColor = adapted.adaptedColor;
+                    element.dataset.adaptedColor = adapted.adaptedColor;
                     addVisualDescription(element, adapted.description);
                 }
-                console.log(`Elemento ${adapted.id} adaptado:`,
-                    adapted.semanticMetadata);
             }
+            console.log(`Elemento ${adapted.id} adaptado:`, adapted.semanticMetadata);
         });
         // Actualizar la leyenda del gráfico si es necesario
-        updateChartLegend(adaptationResponse.adaptedElements,
-            selectedDaltonismType);
+        updateChartLegend(adaptationResponse.adaptedElements, selectedDaltonismType);
 
         // Aquí podrías añadir un SVG con filtros de color para aplicar a elementos generales
         // Esto sería más complejo, pero es una forma avanzada de adaptar
@@ -189,18 +243,14 @@ saturate(200%)`; // Filtro genérico de ejemplo
     function updateChartLegend(adaptedElements, daltonismType) {
         const chartLegend = document.getElementById('chartLegend');
         chartLegend.innerHTML = ''; // Limpiar leyenda actual
-        const barElements = document.querySelectorAll('.data-chart.bar');
+        const barElements = document.querySelectorAll('#salesChart .bar');
         barElements.forEach(bar => {
-            const originalLabel = bar.dataset.label;
-            const adaptedData = adaptedElements.find(ae => ae.id ===
-                `bar-${originalLabel}`); // Buscar por ID construido
+            const originalLabel = bar.dataset.label || bar.id || '';
+            const adaptedData = adaptedElements.find(ae => ae.id === bar.id);
             let labelText = originalLabel;
-            if (adaptedData && adaptedData.semanticMetadata &&
-                daltonismType !== 'none') {
-                // Si hay metadatos, usar la descripción adaptada o parte de ella
-                labelText = `${originalLabel}
-(${adaptedData.semanticMetadata.originalColorHex} ->
-${adaptedData.semanticMetadata.adaptedColorHex})`;
+            if (adaptedData && adaptedData.semanticMetadata && daltonismType !== 'none') {
+                const sm = adaptedData.semanticMetadata;
+                labelText = `${originalLabel} (${sm.originalColor || '--'} -> ${sm.adaptedColor || '--'})`;
             }
             const span = document.createElement('span');
             span.textContent = labelText;
@@ -252,5 +302,46 @@ ${adaptedData.semanticMetadata.adaptedColorHex})`;
         svgFilters.appendChild(filter);
         // Aplicar el filtro a un elemento contenedor principal si se desea una adaptación global
         // Por ahora, lo aplicaremos a elementos individuales vía JS paramayor control.
+    }
+    // --- Integración con SemanticDescriber: generar descripción textual del gráfico ---
+    function generateChartData() {
+        const points = [];
+        document.querySelectorAll('#salesChart .bar').forEach(bar => {
+            const label = bar.dataset.label || bar.id || '';
+            let value = 0;
+            if (bar.style && bar.style.height) {
+                // altura en px -> número
+                value = parseFloat(bar.style.height) || 0;
+            } else {
+                value = bar.clientHeight || 0;
+            }
+            points.push({ label: label, value: value });
+        });
+        return points;
+    }
+
+    const ontology = {
+        seriesNameTranslations: { es: 'Ventas trimestrales', en: 'Quarterly sales' },
+        conceptTranslations: { es: 'Ventas', en: 'Sales' },
+        unit: 'px'
+    };
+    const genDescBtn = document.getElementById('gen-desc');
+    const descriptionDiv = document.getElementById('description');
+    if (genDescBtn && descriptionDiv) {
+        genDescBtn.addEventListener('click', () => {
+            const data = generateChartData();
+            const selectedLang = (document.getElementById('langSelect') || {}).value || 'es';
+            // Construir ontología localizada para el describer
+            const localizedOntology = {
+                seriesName: ontology.seriesNameTranslations[selectedLang] || ontology.seriesNameTranslations['es'],
+                concept: ontology.conceptTranslations[selectedLang] || ontology.conceptTranslations['es'],
+                unit: ontology.unit
+            };
+            let desc = selectedLang === 'en' ? 'Could not generate description.' : 'No se pudo generar la descripción.';
+            if (window.SemanticDescriber && typeof window.SemanticDescriber.generateDescription === 'function') {
+                desc = window.SemanticDescriber.generateDescription(data, localizedOntology, selectedLang);
+            }
+            descriptionDiv.textContent = desc;
+        });
     }
 });
