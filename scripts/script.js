@@ -1,52 +1,85 @@
-// Simulación de la comunicación con el Agente Semántico y de
-// Personalización (servidor)
+// ================================================
+//     AGENTE DE PERSONALIZACIÓN (APRENDIZAJE)
+// ================================================
+
+const personalizationAgent = {
+
+    loadUserProfile: () => {
+        const saved = localStorage.getItem("userProfile");
+        return saved ? JSON.parse(saved) : null;
+    },
+
+    saveUserProfile: (profile) => {
+        localStorage.setItem("userProfile", JSON.stringify(profile));
+    },
+
+    learnColorCorrection: (originalColor, adaptedColor) => {
+        let learned = JSON.parse(localStorage.getItem("learnedColors") || "{}");
+        learned[originalColor] = adaptedColor;
+        localStorage.setItem("learnedColors", JSON.stringify(learned));
+    },
+
+    getLearnedCorrection: (originalColor) => {
+        let learned = JSON.parse(localStorage.getItem("learnedColors") || "{}");
+        return learned[originalColor] || null;
+    }
+};
+
+
+// ======================================================
+//   AGENTE SEMÁNTICO (Simulado - mismo de tu proyecto)
+// ======================================================
+
 const semanticAgent = {
-    // Esto sería una llamada a una API real en un proyecto completo
+
     adaptContent: async (elements, userProfile) => {
         console.log("Simulando adaptación de contenido por Agente Semántico...");
-        console.log("Elementos a analizar:", elements);
-        console.log("Perfil de usuario:", userProfile);
-        // Aquí iría la lógica para enviar los elementos al servidor,
-        // el servidor procesaría con ontologías y metadatos,
-        // y devolvería las adaptaciones.
-        // Datos de ejemplo simulados que el servidor devolvería
         const simulatedResponse = { adaptedElements: [] };
 
-        // Helper simple para detectar palabras clave en colorName u originalColor
         function colorIncludes(element, keyword) {
-            const cname = (element.colorName || '').toString().toLowerCase();
-            const oc = (element.originalColor || '').toString().toLowerCase();
+            const cname = (element.colorName || '').toLowerCase();
+            const oc = (element.originalColor || '').toLowerCase();
             return cname.includes(keyword) || oc.includes(keyword) || oc === keyword;
         }
 
         elements.forEach(element => {
+
             let adaptedColor = element.originalColor || null;
             let description = element.colorName || 'Un elemento visual';
             const type = element.type || 'unknown';
 
-            if (userProfile.daltonismType === 'protanopia') {
-                if (colorIncludes(element, 'rojo') || colorIncludes(element, '#ff6347') || colorIncludes(element, 'ff0000')) {
-                    adaptedColor = '#00FF00';
-                    description = `Adaptado desde rojo a verde para protanopia.`;
-                } else if (type === 'chart-bar' && colorIncludes(element, '#ff6347')) {
-                    adaptedColor = '#A52A2A';
-                    description = `Barra ${element.label || ''} adaptada a tono marrón para protanopia.`;
+            // ===========================================
+            // 1. Aplicar APRENDIZAJE antes de cualquier regla
+            // ===========================================
+            if (element.learnedAdaptation) {
+                adaptedColor = element.learnedAdaptation;
+                description = `Adaptación aprendida por preferencias del usuario.`;
+            }
+
+            // ===========================================
+            // 2. Adaptaciones por daltonismo
+            // ===========================================
+            if (!element.learnedAdaptation) {
+
+                if (userProfile.daltonismType === 'protanopia') {
+                    if (colorIncludes(element, 'rojo') || colorIncludes(element, '#ff6347')) {
+                        adaptedColor = '#00FF00';
+                        description = `Adaptado desde rojo a verde para protanopia.`;
+                    }
                 }
-            } else if (userProfile.daltonismType === 'deuteranopia') {
-                if (colorIncludes(element, 'verde') || colorIncludes(element, '#3cb371') || colorIncludes(element, '#00ff00')) {
-                    adaptedColor = '#FF00FF';
-                    description = `Adaptado desde verde a magenta para deuteranopia.`;
-                } else if (type === 'chart-bar' && colorIncludes(element, '#3cb371')) {
-                    adaptedColor = '#800080';
-                    description = `Barra ${element.label || ''} adaptada a púrpura para deuteranopia.`;
+
+                else if (userProfile.daltonismType === 'deuteranopia') {
+                    if (colorIncludes(element, 'verde') || colorIncludes(element, '#3cb371')) {
+                        adaptedColor = '#FF00FF';
+                        description = `Adaptado desde verde a magenta para deuteranopia.`;
+                    }
                 }
-            } else if (userProfile.daltonismType === 'tritanopia') {
-                if (colorIncludes(element, 'azul') || colorIncludes(element, '#4682b4') || colorIncludes(element, '#0000ff')) {
-                    adaptedColor = '#FFC0CB';
-                    description = `Adaptado desde azul a rosa para tritanopia.`;
-                } else if (type === 'chart-bar' && colorIncludes(element, '#4682b4')) {
-                    adaptedColor = '#FFA500';
-                    description = `Barra ${element.label || ''} adaptada a naranja para tritanopia.`;
+
+                else if (userProfile.daltonismType === 'tritanopia') {
+                    if (colorIncludes(element, 'azul') || colorIncludes(element, '#4682b4')) {
+                        adaptedColor = '#FFC0CB';
+                        description = `Adaptado desde azul a rosa para tritanopia.`;
+                    }
                 }
             }
 
@@ -62,9 +95,10 @@ const semanticAgent = {
             simulatedResponse.adaptedElements.push({
                 id: element.id,
                 type: type,
+                originalColor: element.originalColor,
                 adaptedColor: adaptedColor,
                 description: description,
-                semanticMetadata: semanticMetadata
+                semanticMetadata
             });
         });
 
@@ -72,13 +106,25 @@ const semanticAgent = {
     }
 };
 
-// Agente Local (JavaScript en el navegador)
+
+// ================================================
+//            AGENTE LOCAL (FRONTEND)
+// ================================================
+
 document.addEventListener('DOMContentLoaded', () => {
+
     const daltonismTypeSelect = document.getElementById('daltonismType');
-    const applyAdaptationButton =
-        document.getElementById('applyAdaptation');
+    const applyAdaptationButton = document.getElementById('applyAdaptation');
     const contentArea = document.getElementById('content');
-    // Función para añadir descripciones visuales
+
+    // ===========================================
+    //  CARGAR PERFIL GUARDADO (APRENDIZAJE)
+    // ===========================================
+    const savedProfile = personalizationAgent.loadUserProfile();
+    if (savedProfile) {
+        daltonismTypeSelect.value = savedProfile.daltonismType;
+    }
+
     function addVisualDescription(element, description) {
         let descSpan = element.nextElementSibling;
         if (!descSpan || !descSpan.classList.contains('color-description')) {
@@ -89,16 +135,27 @@ document.addEventListener('DOMContentLoaded', () => {
         descSpan.textContent = description;
         descSpan.style.opacity = '1';
     }
-    // Función para quitar descripciones visuales
+
     function removeVisualDescription(element) {
         let descSpan = element.nextElementSibling;
         if (descSpan && descSpan.classList.contains('color-description')) {
             descSpan.remove();
         }
     }
+
+    // ====================================================
+    // CUANDO EL USUARIO APLICA ADAPTACIÓN
+    // ====================================================
     applyAdaptationButton.addEventListener('click', async () => {
+
         const selectedDaltonismType = daltonismTypeSelect.value;
-        // Resetear adaptaciones previas
+
+        // Guardar preferencia (APRENDIZAJE)
+        personalizationAgent.saveUserProfile({
+            daltonismType: selectedDaltonismType,
+            preferences: { contrastLevel: 'high', fontSize: 'medium' }
+        });
+
         contentArea.querySelectorAll('[data-adapted-color]').forEach(el => {
             if (el.dataset.originalColor) {
                 el.style.backgroundColor = el.dataset.originalColor;
@@ -106,138 +163,147 @@ document.addEventListener('DOMContentLoaded', () => {
             delete el.dataset.adaptedColor;
             removeVisualDescription(el);
         });
+
         contentArea.querySelectorAll('.image-gallery img').forEach(img => {
-            img.style.filter = 'none'; // Quitar filtros CSS si se aplicaron
-            if (img.dataset.originalColor) {
-                // no-op for now; images typically don't have backgroundColor
-            }
+            img.style.filter = 'none';
             removeVisualDescription(img);
         });
-        if (selectedDaltonismType === 'none') {
-            console.log("No se aplica adaptación.");
-            return;
-        }
+
+        if (selectedDaltonismType === 'none') return;
+
         const userProfile = {
             daltonismType: selectedDaltonismType,
-            preferences: {
-                contrastLevel: 'high', // Ejemplo, se obtendría del perfil de usuario
-                fontSize: 'medium'
-            }
+            preferences: { contrastLevel: 'high', fontSize: 'medium' }
         };
+
         const elementsToAnalyze = [];
-        // 1. Recolectar bloques de color
+
+        // ===========================================
+        // BLOQUES DE COLOR
+        // ===========================================
         document.querySelectorAll('.color-block').forEach(block => {
             const oc = getComputedStyle(block).backgroundColor;
-            block.dataset.originalColor = oc; // Guardar para reset
+            block.dataset.originalColor = oc;
+
             elementsToAnalyze.push({
                 id: block.id,
                 type: 'color-block',
                 originalColor: oc,
-                colorName: block.dataset.colorName || null
+                colorName: block.dataset.colorName,
+                learnedAdaptation: personalizationAgent.getLearnedCorrection(oc)
             });
         });
-        // 2. Recolectar barras del gráfico
+
+        // ===========================================
+        // BARRAS DEL GRÁFICO
+        // ===========================================
         document.querySelectorAll('#salesChart .bar').forEach(bar => {
-            // Asegurarse de que la barra tenga un id estable
             if (!bar.id && bar.dataset.label) bar.id = `bar-${bar.dataset.label}`;
-            // data-original-color ya existe en el HTML; asegurar copia a dataset
-            if (bar.dataset.originalColor) bar.dataset.originalColor = bar.dataset.originalColor;
+
             elementsToAnalyze.push({
                 id: bar.id,
                 type: 'chart-bar',
-                originalColor: bar.dataset.originalColor || null,
-                label: bar.dataset.label || null
+                originalColor: bar.dataset.originalColor,
+                label: bar.dataset.label,
+                learnedAdaptation: personalizationAgent.getLearnedCorrection(bar.dataset.originalColor)
             });
         });
-        // 3. Recolectar imágenes
-        document.querySelectorAll('.image-gallery img').forEach(img => {
 
-            // Guardar referencia visual simple si hace falta
-            img.dataset.originalColor = img.dataset.originalColor || '';
+        // ===========================================
+        // IMÁGENES
+        // ===========================================
+        document.querySelectorAll('.image-gallery img').forEach(img => {
             elementsToAnalyze.push({
                 id: img.id,
                 type: 'image',
                 src: img.src,
                 alt: img.alt,
-                colorName: img.dataset.colorName || null
+                colorName: img.dataset.colorName,
+                learnedAdaptation: null
             });
         });
-        // Simular la llamada al Agente Semántico del servidor
-        const adaptationResponse = await
-            semanticAgent.adaptContent(elementsToAnalyze, userProfile);
-        // Aplicar las adaptaciones recibidas
+
+        // Llamada simulada al agente semántico
+        const adaptationResponse = await semanticAgent.adaptContent(elementsToAnalyze, userProfile);
+
+        // APLICAR ADAPTACIONES
         adaptationResponse.adaptedElements.forEach(adapted => {
             const element = document.getElementById(adapted.id);
             if (!element) return;
+
             if (adapted.type === 'image') {
-                // Aplicar un filtro CSS de ejemplo para imágenes
                 element.style.filter = `sepia(20%) saturate(120%)`;
-                if (adapted.adaptedColor) element.dataset.adaptedColor = adapted.adaptedColor;
-                addVisualDescription(element, adapted.description);
-            } else if (adapted.type === 'chart-bar' || adapted.type === 'color-block') {
-                if (adapted.adaptedColor) {
-                    element.style.backgroundColor = adapted.adaptedColor;
-                    element.dataset.adaptedColor = adapted.adaptedColor;
-                }
                 addVisualDescription(element, adapted.description);
             } else {
-                // Por defecto, intentar aplicar color si existe
                 if (adapted.adaptedColor) {
                     element.style.backgroundColor = adapted.adaptedColor;
                     element.dataset.adaptedColor = adapted.adaptedColor;
-                    addVisualDescription(element, adapted.description);
+                }
+                addVisualDescription(element, adapted.description);
+
+                // GUARDAR APRENDIZAJE
+                if (adapted.originalColor && adapted.adaptedColor) {
+                    personalizationAgent.learnColorCorrection(
+                        adapted.originalColor,
+                        adapted.adaptedColor
+                    );
                 }
             }
-            console.log(`Elemento ${adapted.id} adaptado:`, adapted.semanticMetadata);
         });
-        // Actualizar la leyenda del gráfico si es necesario
+
         updateChartLegend(adaptationResponse.adaptedElements, selectedDaltonismType);
 
-        // Aquí podrías añadir un SVG con filtros de color para aplicar a elementos generales
-        // Esto sería más complejo, pero es una forma avanzada de adaptar
-        visualmente.
-            createSVGColorFilters(selectedDaltonismType);
+        createSVGColorFilters(selectedDaltonismType);
     });
+
+    // ===========================================
+    // ACTUALIZAR LEYENDA
+    // ===========================================
     function updateChartLegend(adaptedElements, daltonismType) {
         const chartLegend = document.getElementById('chartLegend');
-        chartLegend.innerHTML = ''; // Limpiar leyenda actual
-        const barElements = document.querySelectorAll('#salesChart .bar');
-        barElements.forEach(bar => {
-            const originalLabel = bar.dataset.label || bar.id || '';
+        chartLegend.innerHTML = '';
+
+        document.querySelectorAll('#salesChart .bar').forEach(bar => {
+            const originalLabel = bar.dataset.label;
             const adaptedData = adaptedElements.find(ae => ae.id === bar.id);
+
             let labelText = originalLabel;
-            if (adaptedData && adaptedData.semanticMetadata && daltonismType !== 'none') {
-                const sm = adaptedData.semanticMetadata;
-                labelText = `${originalLabel} (${sm.originalColor || '--'} -> ${sm.adaptedColor || '--'})`;
+
+            if (adaptedData && daltonismType !== 'none') {
+                labelText = `${originalLabel} (${adaptedData.semanticMetadata.originalColor} -> ${adaptedData.semanticMetadata.adaptedColor})`;
             }
+
             const span = document.createElement('span');
             span.textContent = labelText;
             chartLegend.appendChild(span);
         });
     }
+
+    // ===========================================
+    // FILTROS SVG (sin cambios)
+    // ===========================================
     function createSVGColorFilters(daltonismType) {
-        // Esta es una demostración de cómo se podrían añadir filtros SVG.
-        // En una implementación real, estos filtros serían mucho más complejos
-        // y se basarían en matrices de transformación de color específicas para cada tipo de daltonismo.
         let svgFilters = document.getElementById('svgFilters');
         if (!svgFilters) {
             svgFilters =
                 document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svgFilters.setAttribute("width", "0");
-
             svgFilters.setAttribute("height", "0");
             svgFilters.setAttribute("style", "position: absolute;");
             svgFilters.id = "svgFilters";
             document.body.appendChild(svgFilters);
         }
-        svgFilters.innerHTML = ''; // Limpiar filtros anteriores
+
+        svgFilters.innerHTML = '';
+
         let filter =
             document.createElementNS("http://www.w3.org/2000/svg", "filter");
         filter.setAttribute("id", daltonismType);
+
         let feColorMatrix =
             document.createElementNS("http://www.w3.org/2000/svg", "feColorMatrix");
         feColorMatrix.setAttribute("type", "matrix");
-        // Matrices de ejemplo (simples, no son científicamente precisas para daltonismo)
+
         let matrix = "";
         if (daltonismType === 'protanopia') {
             matrix = "0.567 0.433 0 0 0 " +
@@ -255,10 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 "0 0.083 0.917 0 0 " +
                 "0 0 0 1 0 ";
         }
+
         feColorMatrix.setAttribute("values", matrix);
         filter.appendChild(feColorMatrix);
         svgFilters.appendChild(filter);
-        // Aplicar el filtro a un elemento contenedor principal si se desea una adaptación global
-        // Por ahora, lo aplicaremos a elementos individuales vía JS paramayor control.
     }
 });
