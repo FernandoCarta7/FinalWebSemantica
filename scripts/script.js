@@ -1,5 +1,3 @@
-// Simulación de la comunicación con el Agente Semántico y de
-// Personalización (servidor) con soporte básico de localización
 const semanticAgent = {
     adaptContent: async (elements, userProfile) => {
         const lang = (userProfile && userProfile.language) ? userProfile.language : 'es';
@@ -99,10 +97,17 @@ const semanticAgent = {
 // Agente Local (JavaScript en el navegador)
 document.addEventListener('DOMContentLoaded', () => {
     const daltonismTypeSelect = document.getElementById('daltonismType');
-    const applyAdaptationButton =
-        document.getElementById('applyAdaptation');
+    const applyAdaptationButton = document.getElementById('applyAdaptation');
     const langSelect = document.getElementById('langSelect');
     const contentArea = document.getElementById('content');
+
+    // ---- AL CARGAR LA PAGINA RECUPERA LA ULTIMA PREFERENCIA DEL USUARIO ----
+    const storedPreference = localStorage.getItem('daltonismPreference');
+    if (storedPreference) {
+        daltonismTypeSelect.value = storedPreference;
+        console.log(`Preferencia de daltonismo cargada: ${storedPreference}`);
+    }
+
     // Función para añadir descripciones visuales
     function addVisualDescription(element, description) {
         let descSpan = element.nextElementSibling;
@@ -139,6 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAdaptationButton.addEventListener('click', async () => {
         const selectedDaltonismType = daltonismTypeSelect.value;
         const selectedLang = (langSelect && langSelect.value) ? langSelect.value : 'es';
+
+        // ----- GUARDAR SELECCION EN LOCALSTORAGE PARA APRENDIZAJE DEL USUARIO -----
+        localStorage.setItem('daltonismPreference', selectedDaltonismType);
+
         // Resetear adaptaciones previas
         contentArea.querySelectorAll('[data-adapted-color]').forEach(el => {
             if (el.dataset.originalColor) {
@@ -166,44 +175,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 fontSize: 'medium'
             }
         };
-        const elementsToAnalyze = [];
-        // 1. Recolectar bloques de color
-        document.querySelectorAll('.color-block').forEach(block => {
-            const oc = getComputedStyle(block).backgroundColor;
-            block.dataset.originalColor = oc; // Guardar para reset
-            elementsToAnalyze.push({
-                id: block.id,
-                type: 'color-block',
-                originalColor: oc,
-                colorName: block.dataset.colorName || null
-            });
-        });
-        // 2. Recolectar barras del gráfico
-        document.querySelectorAll('#salesChart .bar').forEach(bar => {
-            // Asegurarse de que la barra tenga un id estable
-            if (!bar.id && bar.dataset.label) bar.id = `bar-${bar.dataset.label}`;
-            // data-original-color ya existe en el HTML; asegurar copia a dataset
-            if (bar.dataset.originalColor) bar.dataset.originalColor = bar.dataset.originalColor;
-            elementsToAnalyze.push({
-                id: bar.id,
-                type: 'chart-bar',
-                originalColor: bar.dataset.originalColor || null,
-                label: bar.dataset.label || null
-            });
-        });
-        // 3. Recolectar imágenes
-        document.querySelectorAll('.image-gallery img').forEach(img => {
+    // --- DETECCIÓN AUTOMÁTICA DE ELEMENTOS CON COLOR ---
+    function detectarElementosConColor() {
+        const elementosDetectados = []; // Lista donde se almacenarán todos los elementos visuales detectados
 
+        // --- 1. DETECTAR ELEMENTOS CON COLOR DE FONDO ---
+        document.querySelectorAll('*').forEach(el => { // Recorre TODOS los elementos del DOM
+            const style = getComputedStyle(el);        // Obtiene el estilo computado del elemento
+            const bg = style.backgroundColor;          // Extrae su color de fondo actual
+
+            // Se descartan colores irrelevantes: transparentes, invisibles o blancos
+            if (
+                bg !== "rgba(0, 0, 0, 0)" &&
+                bg !== "transparent" &&
+                bg !== "rgb(255, 255, 255)"
+            ) {
+                elementosDetectados.push({
+                    id: el.id || (`elem-${Math.random().toString(36).substr(2, 9)}`), // Si no tiene ID, se genera uno único
+                    type: "color-element",                // Se marca como un elemento con color
+                    originalColor: bg,                    // Se guarda su color original
+                    colorName: el.dataset.colorName || "Elemento con color detectado" // Si tiene un nombre definido, se guarda (opcional)
+                });
+            }
+        });
+
+        // --- 2. DETECTAR IMÁGENES ---
+        document.querySelectorAll("img").forEach(img => { // Recorre todas las etiquetas <img>
+            elementosDetectados.push({
+                id: img.id || `img-${Math.random().toString(36).substr(2, 9)}`, // Genera ID si no tiene
+                type: "image",                          // Se marca como imagen
+                src: img.src,                           // Guarda la URL de la imagen
+                alt: img.alt,                           // Guarda el texto alternativo
+                colorName: img.dataset.colorName || "Imagen detectada" // Se extrae nombre si está definido
+            });
+        });
+
+        // --- 3. DETECTAR BARRAS DE GRÁFICO ---
+        document.querySelectorAll(".bar").forEach(bar => { // Busca todas las barras con clase .bar (gráfico)
             // Guardar referencia visual simple si hace falta
             img.dataset.originalColor = img.dataset.originalColor || '';
-            elementsToAnalyze.push({
-                id: img.id,
-                type: 'image',
-                src: img.src,
-                alt: img.alt,
-                colorName: img.dataset.colorName || null
+            elementosDetectados.push({
+                id: bar.id || `bar-${bar.dataset.label}`, // Usa ID o genera uno con la etiqueta del dato
+                type: "chart-bar",                        // Marca como barra de gráfico
+                originalColor: bar.dataset.originalColor || getComputedStyle(bar).backgroundColor, // Usa color original definido o lo extrae directamente
+                label: bar.dataset.label                  // Guarda la etiqueta (Q1, Q2, etc.) || null
             });
         });
+
+        return elementosDetectados; // Devuelve el array completo de elementos encontrados
+    }
+
+    // Llama a la función y guarda los elementos detectados
+    const elementsToAnalyze = detectarElementosConColor();
+
+    // Muestra en consola todos los elementos detectados
+    console.log("Elementos detectados automáticamente:", elementsToAnalyze);
+    // --- FIN DE LA DETECCIÓN AUTOMÁTICA DE ELEMENTOS CON COLOR ---
+
         // Simular la llamada al Agente Semántico del servidor
         const adaptationResponse = await
             semanticAgent.adaptContent(elementsToAnalyze, userProfile);
