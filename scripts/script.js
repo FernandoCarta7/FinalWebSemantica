@@ -1,4 +1,37 @@
+// ================================================
+//     AGENTE DE PERSONALIZACIÓN (APRENDIZAJE)
+// ================================================
+
+const personalizationAgent = {
+
+    loadUserProfile: () => {
+        const saved = localStorage.getItem("userProfile");
+        return saved ? JSON.parse(saved) : null;
+    },
+
+    saveUserProfile: (profile) => {
+        localStorage.setItem("userProfile", JSON.stringify(profile));
+    },
+
+    learnColorCorrection: (originalColor, adaptedColor) => {
+        let learned = JSON.parse(localStorage.getItem("learnedColors") || "{}");
+        learned[originalColor] = adaptedColor;
+        localStorage.setItem("learnedColors", JSON.stringify(learned));
+    },
+
+    getLearnedCorrection: (originalColor) => {
+        let learned = JSON.parse(localStorage.getItem("learnedColors") || "{}");
+        return learned[originalColor] || null;
+    }
+};
+
+
+// ======================================================
+//   AGENTE SEMÁNTICO (Simulado - mismo de tu proyecto)
+// ======================================================
+
 const semanticAgent = {
+    // Esto sería una llamada a una API real en un proyecto completo
     adaptContent: async (elements, userProfile) => {
         const lang = (userProfile && userProfile.language) ? userProfile.language : 'es';
         console.log("Simulando adaptación de contenido por Agente Semántico (lang=", lang, ")...");
@@ -84,9 +117,11 @@ const semanticAgent = {
             simulatedResponse.adaptedElements.push({
                 id: element.id,
                 type: type,
+                originalColor: element.originalColor,
+                type: type,
                 adaptedColor: adaptedColor,
                 description: description,
-                semanticMetadata: semanticMetadata
+                semanticMetadata
             });
         });
 
@@ -94,8 +129,13 @@ const semanticAgent = {
     }
 };
 
-// Agente Local (JavaScript en el navegador)
+
+// ================================================
+//            AGENTE LOCAL (FRONTEND)
+// ================================================
+
 document.addEventListener('DOMContentLoaded', () => {
+
     const daltonismTypeSelect = document.getElementById('daltonismType');
     const applyAdaptationButton = document.getElementById('applyAdaptation');
     const langSelect = document.getElementById('langSelect');
@@ -108,7 +148,15 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Preferencia de daltonismo cargada: ${storedPreference}`);
     }
 
-    // Función para añadir descripciones visuales
+
+    // ===========================================
+    //  CARGAR PERFIL GUARDADO (APRENDIZAJE)
+    // ===========================================
+    const savedProfile = personalizationAgent.loadUserProfile();
+    if (savedProfile) {
+        daltonismTypeSelect.value = savedProfile.daltonismType;
+    }
+
     function addVisualDescription(element, description) {
         let descSpan = element.nextElementSibling;
         if (!descSpan || !descSpan.classList.contains('color-description')) {
@@ -119,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         descSpan.textContent = description;
         descSpan.style.opacity = '1';
     }
-    // Función para quitar descripciones visuales
+
     function removeVisualDescription(element) {
         let descSpan = element.nextElementSibling;
         if (descSpan && descSpan.classList.contains('color-description')) {
@@ -142,13 +190,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applyAdaptationButton.addEventListener('click', async () => {
+
         const selectedDaltonismType = daltonismTypeSelect.value;
         const selectedLang = (langSelect && langSelect.value) ? langSelect.value : 'es';
 
         // ----- GUARDAR SELECCION EN LOCALSTORAGE PARA APRENDIZAJE DEL USUARIO -----
         localStorage.setItem('daltonismPreference', selectedDaltonismType);
 
-        // Resetear adaptaciones previas
+
+        // Guardar preferencia (APRENDIZAJE)
+        personalizationAgent.saveUserProfile({
+            daltonismType: selectedDaltonismType,
+            preferences: { contrastLevel: 'high', fontSize: 'medium' }
+        });
+
         contentArea.querySelectorAll('[data-adapted-color]').forEach(el => {
             if (el.dataset.originalColor) {
                 el.style.backgroundColor = el.dataset.originalColor;
@@ -156,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delete el.dataset.adaptedColor;
             removeVisualDescription(el);
         });
+        contentArea.querySelectorAll('.adapted-textdescription').forEach(el => el.remove());
         contentArea.querySelectorAll('.image-gallery img').forEach(img => {
             img.style.filter = 'none'; // Quitar filtros CSS si se aplicaron
             if (img.dataset.originalColor) {
@@ -163,17 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             removeVisualDescription(img);
         });
-        if (selectedDaltonismType === 'none') {
-            console.log("No se aplica adaptación.");
-            return;
-        }
+
+        if (selectedDaltonismType === 'none') return;
+
         const userProfile = {
             daltonismType: selectedDaltonismType,
             language: selectedLang,
-            preferences: {
-                contrastLevel: 'high', // Ejemplo, se obtendría del perfil de usuario
-                fontSize: 'medium'
-            }
+            preferences: { contrastLevel: 'high', fontSize: 'medium' }
         };
     // --- DETECCIÓN AUTOMÁTICA DE ELEMENTOS CON COLOR ---
     function detectarElementosConColor() {
@@ -255,19 +307,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (adapted.adaptedColor) {
                     element.style.backgroundColor = adapted.adaptedColor;
                     element.dataset.adaptedColor = adapted.adaptedColor;
-                    addVisualDescription(element, adapted.description);
+                }
+                addVisualDescription(element, adapted.description);
+
+                // GUARDAR APRENDIZAJE
+                if (adapted.originalColor && adapted.adaptedColor) {
+                    personalizationAgent.learnColorCorrection(
+                        adapted.originalColor,
+                        adapted.adaptedColor
+                    );
                 }
             }
-            console.log(`Elemento ${adapted.id} adaptado:`, adapted.semanticMetadata);
         });
-        // Actualizar la leyenda del gráfico si es necesario
+
         updateChartLegend(adaptationResponse.adaptedElements, selectedDaltonismType);
 
-        // Aquí podrías añadir un SVG con filtros de color para aplicar a elementos generales
-        // Esto sería más complejo, pero es una forma avanzada de adaptar
-        visualmente.
-            createSVGColorFilters(selectedDaltonismType);
+        createSVGColorFilters(selectedDaltonismType);
     });
+
+    // ===========================================
+    // ACTUALIZAR LEYENDA
+    // ===========================================
     function updateChartLegend(adaptedElements, daltonismType) {
         const chartLegend = document.getElementById('chartLegend');
         chartLegend.innerHTML = ''; // Limpiar leyenda actual
@@ -280,34 +340,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sm = adaptedData.semanticMetadata;
                 labelText = `${originalLabel} (${sm.originalColor || '--'} -> ${sm.adaptedColor || '--'})`;
             }
+
             const span = document.createElement('span');
             span.textContent = labelText;
             chartLegend.appendChild(span);
         });
     }
+
+    // ===========================================
+    // FILTROS SVG (sin cambios)
+    // ===========================================
     function createSVGColorFilters(daltonismType) {
-        // Esta es una demostración de cómo se podrían añadir filtros SVG.
-        // En una implementación real, estos filtros serían mucho más complejos
-        // y se basarían en matrices de transformación de color específicas para cada tipo de daltonismo.
         let svgFilters = document.getElementById('svgFilters');
         if (!svgFilters) {
             svgFilters =
                 document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svgFilters.setAttribute("width", "0");
-
             svgFilters.setAttribute("height", "0");
             svgFilters.setAttribute("style", "position: absolute;");
             svgFilters.id = "svgFilters";
             document.body.appendChild(svgFilters);
         }
-        svgFilters.innerHTML = ''; // Limpiar filtros anteriores
+
+        svgFilters.innerHTML = '';
+
         let filter =
             document.createElementNS("http://www.w3.org/2000/svg", "filter");
         filter.setAttribute("id", daltonismType);
+
         let feColorMatrix =
             document.createElementNS("http://www.w3.org/2000/svg", "feColorMatrix");
         feColorMatrix.setAttribute("type", "matrix");
-        // Matrices de ejemplo (simples, no son científicamente precisas para daltonismo)
+
         let matrix = "";
         if (daltonismType === 'protanopia') {
             matrix = "0.567 0.433 0 0 0 " +
@@ -325,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "0 0.083 0.917 0 0 " +
                 "0 0 0 1 0 ";
         }
+
         feColorMatrix.setAttribute("values", matrix);
         filter.appendChild(feColorMatrix);
         svgFilters.appendChild(filter);
